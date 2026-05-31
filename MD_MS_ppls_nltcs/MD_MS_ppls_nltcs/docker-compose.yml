@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  pa-microservice:
+    build: .
+    container_name: people_analytics_api
+    ports:
+      - "8090:8000"
+    environment:
+      - TZ=America/Sao_Paulo  # Fundamental para os cálculos de data ficarem no fuso correto
+    restart: always

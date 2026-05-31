@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  ai-microservice:
+    build: .
+    ports:
+      - "8005:8000"
+    volumes:
+      - .:/app  # Mapeia sua pasta local para o contêiner (Live Reload)
+    environment:
+      - SUPABASE_URL=sua_url_aqui
+      - SUPABASE_KEY=sua_key_aqui
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
