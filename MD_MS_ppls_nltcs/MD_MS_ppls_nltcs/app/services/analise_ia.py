@@ -2,7 +2,8 @@ import pandas as pd
 from openai import OpenAI
 
 # Hardcoded key conforme solicitado
-OPENAI_API_KEY = "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"
+import os
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def gerar_analise_funcionario(row):
