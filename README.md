@@ -1,6 +1,12 @@
 # MindDesk - Ecossistema Corporativo e Cognitivo de RH
 
+
+![Equipe MindDesk](assets/time_minddesk.jpeg)
+
 O MindDesk é uma plataforma corporativa projetada para centralizar e automatizar a gestão de Recursos Humanos e o suporte operacional aos colaboradores. A solução atua diretamente sobre a fragmentação de dados organizacionais e o gargalo do atendimento interno, combinando um sistema transacional estruturado com uma camada cognitiva avançada. O diferencial estratégico da arquitetura reside na integração de Inteligência Artificial distribuída: um barramento de agentes especialistas capazes de interpretar normas institucionais, auditar documentos médicos e executar operações via linguagem natural, operando de forma paralela com motores analíticos contínuos (People Analytics e Pulse). Estes motores transformam o histórico de operações e interações em indicadores preditivos de engajamento, risco de turnover, burnout e saúde ocupacional.
+
+
+
 
 ## Arquitetura e Fluxo de Dados
 
