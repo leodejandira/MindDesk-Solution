@@ -1,78 +1,489 @@
-# MindDesk - Agente Tools (Microserviço de Consulta Estruturada)
+# MindDesk - Agente de Ferramentas (Tools Agent)
 
-Este microserviço em Python (FastAPI) atua como o **Especialista em Banco de Dados** do ecossistema de Inteligência Artificial da plataforma **MindDesk**. 
+Este microserviço em Python (FastAPI) atua como o **Especialista Transacional** do ecossistema MindDesk.
 
-A sua responsabilidade única é receber solicitações delegadas pelo Orquestrador, interpretar a intenção do usuário utilizando o padrão de arquitetura **Function Calling (Tools)** da OpenAI e extrair dados operacionais estruturados (Férias, Atestados, Histórico do Funcionário) diretamente do Data Warehouse (Supabase) da empresa.
+Sua responsabilidade exclusiva é executar consultas e operações estruturadas sobre os dados corporativos armazenados no banco de dados, utilizando o mecanismo de Function Calling da OpenAI para converter linguagem natural em ações concretas.
+
+Diferentemente do Agente RAG, que responde utilizando documentos institucionais, o Agente Tools opera diretamente sobre informações operacionais da empresa, como colaboradores, férias e atestados médicos.
 
 ---
 
-##  Posição no Ecossistema MindDesk
+## Posição no Ecossistema MindDesk
 
-O Agente Tools atua na "Ponta de Lança", recebendo apenas tráfego que o Roteador Semântico determinou como uma busca de banco de dados.
+O Agente Tools é acionado pelo Orquestrador sempre que a intenção identificada exige acesso ou modificação de dados estruturados.
 
 ```mermaid
 sequenceDiagram
-    participant Orq as Orquestrador
-    participant Tools as Agente Tools (FastAPI)
-    participant LLM as OpenAI (GPT-4o-mini)
-    participant DB as Supabase REST API
+    participant User as Usuário
+    participant Orch as Orquestrador
+    participant Tools as Agente Tools
+    participant GPT as GPT-4o-mini
+    participant DB as Supabase
 
-    Orq->>Tools: HTTP POST /api/v1/executar (Contexto Histórico)
-    Tools->>LLM: Analisa histórico + Schema das Funções
-    LLM-->>Tools: Responde: "Preciso rodar consultar_ferias_db(Jonas)"
-    Tools->>DB: HTTP GET /rest/v1/ferias?tenant_id=eq.X
-    DB-->>Tools: Retorna JSON com os dados das férias
-    Tools->>LLM: Injeta dados reais e pede formatação humanizada
-    LLM-->>Tools: Retorna resposta formatada
-    Tools-->>Orq: Devolve a resposta final
+    Orch->>Tools: POST /executar
+
+    Tools->>GPT: Prompt + Histórico + Ferramentas
+
+    GPT-->>Tools: Tool Call
+
+    alt Consulta de Funcionário
+        Tools->>DB: consultar_funcionario_db()
+    else Consulta de Férias
+        Tools->>DB: consultar_ferias_db()
+    else Consulta de Atestados
+        Tools->>DB: consultar_atestados_db()
+    else Salvar Atestado
+        Tools->>DB: salvar_atestado_db()
+    end
+
+    DB-->>Tools: Resultado
+
+    Tools->>GPT: Resultado da Ferramenta
+    GPT-->>Tools: Resposta Humanizada
+
+    Tools-->>Orch: Answer
 ```
 
 ---
 
-##  Arquitetura Orientada a Serviços (SRP)
+## Arquitetura e Fluxo de Dados (SRP)
 
-O microserviço foi refatorado para garantir alta coesão e baixo acoplamento:
+O microserviço foi dividido em camadas para separar claramente raciocínio, persistência e exposição HTTP.
 
 ```text
 /app
-├── main.py                 # Ponto de entrada ASGI da aplicação
-├── core/
-│   └── schemas.py          # Declaração do Pydantic Payload e do TOOLS_SCHEMA (Manual da IA)
+├── main.py
+│
 ├── api/
-│   └── routes.py           # Endpoints isolados de regras de negócio
+│   └── routes.py
+│
+├── core/
+│   └── schemas.py
+│
 └── services/
-    ├── db_service.py       # Interação Assíncrona via HTTP REST com o Banco de Dados
-    └── llm_service.py      # Lógica de Orquestração Reversa e Function Calling (OpenAI)
+    ├── llm_service.py
+    └── db_service.py
 ```
 
 ---
 
-##  Detalhamento de Módulos e Funções
+## Filosofia Arquitetural
 
-### 1. Motor de LLM (`app/services/llm_service.py`)
-Utiliza o cliente `AsyncOpenAI`. É responsável pelo ciclo duplo de inteligência:
-1. **Primeira Chamada:** Pede para a IA avaliar se precisa buscar dados.
-2. **Execução de Tools:** Executa as funções Python baseando-se na decisão da IA.
-3. **Segunda Chamada:** Devolve o JSON bruto do banco para a IA transformar em um texto legível e empático.
+O Agente Tools segue o padrão:
 
-### 2. Guardião de I/O de Dados (`app/services/db_service.py`)
-Responsável pelas extrações no banco Supabase. **Nota de Arquitetura:** Este serviço aboliu o uso de SDKs síncronos da provedora do banco e utiliza `httpx` assíncrono para garantir que o Event Loop do FastAPI não sofra gargalos durante consultas pesadas, prevenindo também o erro crônico de proxy.
+```text
+Natural Language
+        ↓
+GPT Tool Calling
+        ↓
+Função Python
+        ↓
+Banco de Dados
+        ↓
+Resultado Estruturado
+        ↓
+GPT
+        ↓
+Resposta Humanizada
+```
 
-Exemplo de design das funções I/O:
+A IA não acessa diretamente o banco.
+
+Ela apenas decide:
+
+* qual ferramenta utilizar
+* quais parâmetros enviar
+* como interpretar o resultado
+
+Toda interação real ocorre através de funções controladas pelo backend.
+
+---
+
+## Contrato de Entrada
+
+Todas as operações utilizam o DTO:
+
 ```python
-async def consultar_ferias_db(nome: str, tenant_id: int, supa_url: str, supa_key: str) -> str:
-    # 1. Busca assíncrona do ID do funcionário (Filtro por Tenant ILIKE)
-    # 2. Busca assíncrona da tabela relacional de Férias
-    # 3. Tratamento de retornos vazios ou múltiplos
+class ToolPayload(BaseModel):
+    query: str
+    tenant_id: int
+    user_id: str
+    role: str
+    history: list
 ```
 
-### 3. Schemas Estritos (`app/core/schemas.py`)
-Além do payload de rede, hospeda o `TOOLS_SCHEMA`. Se uma nova tabela for criada no banco (ex: *Folha de Pagamento*), basta declarar a assinatura da ferramenta aqui e a IA aprenderá instantaneamente como utilizá-la.
+Além da pergunta do usuário, o payload contém:
+
+* identificação do colaborador
+* tenant corporativo
+* histórico da conversa
+* credenciais de integração
+
+permitindo que o agente mantenha contexto operacional durante múltiplas interações.
 
 ---
 
-## Escalabilidade e Manutenção
+## Motor de Raciocínio com Function Calling
 
-1. **Assincronismo I/O Bound:** Como todas as chamadas (OpenAI e Supabase) são não-bloqueantes (`await`), um único worker do Uvicorn consegue suportar milhares de conexões simultâneas sem consumir alta carga de CPU.
-2. **Separação do Schema:** Alterações nas regras de negócio (como o formato que o RH quer exibir as férias) são feitas isoladamente no `db_service.py`, sem risco de quebrar o modelo mental do `llm_service.py`.
-3. **Deploy Contínuo:** Utiliza Live Reload local com montagem de volumes, e Docker nativo (`3.9-slim`) preparado para instâncias efêmeras na nuvem.
+O núcleo do sistema encontra-se em:
+
+```text
+services/llm_service.py
+```
+
+A OpenAI recebe:
+
+```python
+messages
+tools
+tool_choice="auto"
+```
+
+A partir desse ponto, o modelo deixa de ser apenas um chatbot e passa a atuar como um planejador de execução.
+
+Exemplo:
+
+Usuário:
+
+```text
+Quais férias o João possui registradas?
+```
+
+O GPT identifica automaticamente:
+
+```json
+{
+  "function": "consultar_ferias_db",
+  "nome": "João"
+}
+```
+
+sem necessidade de programação específica para cada frase possível.
+
+---
+
+## Catálogo de Ferramentas
+
+O agente expõe um conjunto controlado de operações.
+
+### Consulta de Funcionários
+
+```python
+consultar_funcionario_db()
+```
+
+Responsável por buscar:
+
+* nome
+* cargo
+* data de admissão
+* saldo de férias
+
+---
+
+### Consulta de Férias
+
+```python
+consultar_ferias_db()
+```
+
+Busca:
+
+* períodos usufruídos
+* períodos programados
+* status das solicitações
+
+---
+
+### Consulta de Atestados
+
+```python
+consultar_atestados_db()
+```
+
+Retorna:
+
+* data de emissão
+* dias de afastamento
+* CID
+* status do documento
+
+---
+
+### Persistência de Atestados
+
+```python
+salvar_atestado_db()
+```
+
+Responsável por registrar documentos médicos processados pelo Agente Docs.
+
+Campos persistidos:
+
+```json
+{
+  "data_emissao": "...",
+  "dias_afastamento": 5,
+  "motivo_cid": "J11",
+  "url_arquivo": "..."
+}
+```
+
+---
+
+## Pipeline de Execução
+
+### Etapa 1 — Interpretação
+
+O GPT recebe:
+
+```python
+messages
+```
+
+contendo:
+
+* prompt do sistema
+* histórico recente
+* mensagem atual
+
+---
+
+### Etapa 2 — Seleção de Ferramenta
+
+O modelo avalia:
+
+```python
+TOOLS_SCHEMA
+```
+
+e escolhe automaticamente a função mais adequada.
+
+```python
+tool_choice="auto"
+```
+
+---
+
+### Etapa 3 — Execução Backend
+
+O backend interpreta:
+
+```python
+response_message.tool_calls
+```
+
+e executa a função correspondente.
+
+```python
+if tool_call.function.name == "consultar_ferias_db":
+```
+
+Essa etapa elimina qualquer possibilidade de execução arbitrária por parte da IA.
+
+---
+
+### Etapa 4 — Retorno para o Modelo
+
+Após a consulta:
+
+```python
+messages.append({
+    "role": "tool",
+    "content": dados_do_banco
+})
+```
+
+O resultado é devolvido ao GPT.
+
+---
+
+### Etapa 5 — Geração da Resposta Final
+
+A OpenAI transforma o resultado técnico em linguagem natural.
+
+Exemplo:
+
+Resultado bruto:
+
+```text
+Data: 2025-02-01
+Status: Aprovado
+```
+
+Resposta final:
+
+```text
+João possui férias aprovadas entre 01/02/2025 e 15/02/2025.
+```
+
+---
+
+## Fluxo Especial de Atestados
+
+O agente implementa um mecanismo de confirmação humana antes da gravação definitiva.
+
+### Leitura Inicial
+
+O Agente Docs extrai:
+
+```text
+Data
+CID
+Dias de afastamento
+```
+
+---
+
+### Validação do Usuário
+
+O assistente pergunta:
+
+```text
+Os dados estão corretos?
+```
+
+---
+
+### Confirmação
+
+Usuário:
+
+```text
+Sim
+```
+
+---
+
+### Persistência
+
+O GPT identifica a intenção e executa:
+
+```python
+salvar_atestado_db()
+```
+
+utilizando os dados previamente armazenados no histórico.
+
+Esse padrão reduz drasticamente erros de lançamento.
+
+---
+
+## Camada de Banco de Dados
+
+O acesso aos dados ocorre através do Supabase REST API.
+
+```python
+httpx.AsyncClient()
+```
+
+Consultas realizadas:
+
+```text
+usuarios
+ferias
+atestados
+```
+
+Todas filtradas por:
+
+```python
+tenant_id
+```
+
+garantindo isolamento entre empresas.
+
+---
+
+## Segurança Multitenant
+
+Toda operação utiliza obrigatoriamente:
+
+```python
+tenant_id
+```
+
+e
+
+```python
+user_id
+```
+
+impedindo vazamento de informações entre organizações.
+
+Nenhuma consulta é executada sem escopo corporativo explícito.
+
+---
+
+## Controle de Permissões
+
+A decisão sobre quem pode acessar o agente ocorre no Orquestrador.
+
+Dessa forma o Agente Tools recebe apenas solicitações previamente autorizadas.
+
+Isso mantém a lógica de autorização desacoplada da lógica transacional.
+
+---
+
+## Escalabilidade e Performance
+
+### 1. Comunicação Assíncrona
+
+Todas as integrações utilizam:
+
+```python
+httpx.AsyncClient
+```
+
+evitando bloqueio do Event Loop.
+
+---
+
+### 2. Ferramentas Declarativas
+
+Novas operações podem ser adicionadas apenas registrando uma nova função em:
+
+```python
+TOOLS_SCHEMA
+```
+
+sem necessidade de alterar o fluxo principal de raciocínio.
+
+---
+
+### 3. Baixo Acoplamento
+
+O GPT não conhece:
+
+* SQL
+* Supabase
+* estrutura física do banco
+
+Ele conhece apenas contratos de ferramentas.
+
+Isso permite trocar a tecnologia de persistência sem alterar o comportamento conversacional.
+
+---
+
+### 4. Observabilidade
+
+Logs estruturados registram:
+
+```python
+logger.info(...)
+logger.error(...)
+```
+
+permitindo monitoramento completo das operações executadas.
+
+---
+
+## Papel Estratégico na Plataforma
+
+O Agente Tools representa a camada operacional do MindDesk.
+
+Enquanto o Agente RAG responde perguntas utilizando conhecimento institucional, o Tools Agent executa ações reais sobre os dados da empresa.
+
+Ele transforma intenções em operações concretas através de Function Calling, criando uma ponte segura entre Inteligência Artificial e sistemas corporativos.
+
+Na prática, ele funciona como um analista de RH digital capaz de consultar, validar e registrar informações sem exigir que o usuário conheça tabelas, APIs ou estruturas de banco de dados.
