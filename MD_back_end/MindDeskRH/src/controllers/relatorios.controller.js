@@ -1,18 +1,22 @@
 const supabase = require('../config/supabase');
 
 // =========================================
-// HELPER: calcula situação de férias
-//
-// LÓGICA CORRETA E BLINDADA PELA CLT:
-// A coluna "data_ferias_prevista" do banco marca o FIM do período aquisitivo.
-// O vencimento legal (fim do período concessivo) é EXATAMENTE 12 meses 
-// após a "data_ferias_prevista".
+// HELPER: verifica se e dia util (ignora apenas fins de semana)
+// =========================================
+function isDiaUtil(dataStr) {
+    const data = new Date(`${dataStr}T12:00:00`);
+    const diaSemana = data.getDay();
+    return diaSemana !== 0 && diaSemana !== 6;
+}
+
+// =========================================
+// HELPER: calcula situacao de ferias
 // =========================================
 function calcularSituacaoFerias(pendenteMaisAntiga) {
     if (!pendenteMaisAntiga || !pendenteMaisAntiga.data_ferias_prevista) {
         return {
             situacao: 'Em dia',
-            aviso: 'Funcionário com situação regular. Não há férias pendentes.',
+            aviso: 'Funcionario com situacao regular. Nao ha ferias pendentes.',
             prioridade: 'ok',
             meses_referencia: 0,
             data_vencimento: null
@@ -20,20 +24,15 @@ function calcularSituacaoFerias(pendenteMaisAntiga) {
     }
 
     const hoje = new Date();
-    
-    // Fim do período aquisitivo (ex: a data 2024-12-03 do seu banco)
+
     const fimAquisitivo = new Date(pendenteMaisAntiga.data_ferias_prevista);
 
-    // O limite máximo (vencimento) é 12 meses após o fim do período aquisitivo
     const dataVencimento = new Date(fimAquisitivo);
     dataVencimento.setMonth(dataVencimento.getMonth() + 12);
 
-    // O início do ciclo aquisitivo foi 12 meses ANTES do fimAquisitivo.
-    // Usamos isso para manter a sua régua de alertas (12, 16, 20 meses)
     const inicioAquisitivo = new Date(fimAquisitivo);
     inicioAquisitivo.setMonth(inicioAquisitivo.getMonth() - 12);
 
-    // Calculando meses decorridos DESDE O INÍCIO DO CICLO 
     let mesesDesdeInicio =
         (hoje.getFullYear() - inicioAquisitivo.getFullYear()) * 12 +
         (hoje.getMonth() - inicioAquisitivo.getMonth());
@@ -45,7 +44,6 @@ function calcularSituacaoFerias(pendenteMaisAntiga) {
         prioridade = 'critica';
         aviso = 'Férias vencidas. Risco de marcação compulsória imediata e pagamento em dobro.';
     } else if (mesesDesdeInicio >= 20) {
-        // Faltam até 4 meses para o limite
         situacao = 'Crítica';
         prioridade = 'critica';
         aviso = 'Você possui férias a vencer. Caso não marque nos próximos 30 dias, será realizada marcação de férias compulsórias.';
@@ -77,168 +75,163 @@ function calcularSituacaoFerias(pendenteMaisAntiga) {
 }
 
 // =========================================
-// RELATÓRIO DE FALTAS
+// RELATORIO DE FALTAS
 // =========================================
 exports.relatorioFaltas = async (req, res) => {
     const { tenant_id, data_inicio, data_fim } = req.query;
 
     if (!tenant_id || !data_inicio || !data_fim) {
-        return res.status(400).json({
-            error: 'tenant_id, data_inicio e data_fim são obrigatórios.'
-        });
+        return res.status(400).json({ error: 'tenant_id, data_inicio e data_fim são obrigatórios.' });
     }
 
     try {
         const gerente_id = req.user.id;
 
+        // 1. Busca os usuários vinculados ao gerente e tenant
         const { data: usuarios, error: usuariosError } = await supabase
             .from('usuarios')
-            .select('id, nome, email, cargo')
+            .select('id, nome, cargo')
             .eq('tenant_id', tenant_id)
             .eq('gerente_id', gerente_id);
 
-        if (usuariosError) {
-            return res.status(500).json({ error: usuariosError.message });
-        }
-
+        if (usuariosError) return res.status(500).json({ error: usuariosError.message });
         const usuariosIds = usuarios.map(u => u.id);
 
+        // 2. Busca os registros de ponto no período
         const { data: pontos, error: pontosError } = await supabase
             .from('pontos')
-            .select('usuario_id, horario, tipo')
+            .select('usuario_id, horario')
             .eq('tenant_id', tenant_id)
             .in('usuario_id', usuariosIds)
             .gte('horario', `${data_inicio}T00:00:00`)
             .lte('horario', `${data_fim}T23:59:59`);
 
-        if (pontosError) {
-            return res.status(500).json({ error: pontosError.message });
-        }
+        if (pontosError) return res.status(500).json({ error: pontosError.message });
 
+        // 3. Gera a lista de dias úteis (Segunda a Sexta)
         const diasUteis = [];
-        const atual = new Date(data_inicio);
-        const fim = new Date(data_fim);
-
-        while (atual <= fim) {
-            const diaSemana = atual.getDay();
-            if (diaSemana !== 0 && diaSemana !== 6) {
-                diasUteis.push(atual.toISOString().split('T')[0]);
+        let d = new Date(`${data_inicio}T12:00:00`);
+        const fim = new Date(`${data_fim}T12:00:00`);
+        
+        while (d <= fim) {
+            const dataStr = d.toISOString().split('T')[0];
+            // 0 = Domingo, 6 = Sábado
+            if (d.getDay() !== 0 && d.getDay() !== 6) {
+                diasUteis.push(dataStr);
             }
-            atual.setDate(atual.getDate() + 1);
+            d.setDate(d.getDate() + 1);
         }
 
-        const relatorio = usuarios
-            .map(usuario => {
-                const faltas = diasUteis.filter(dia => {
-                    const temEntrada = pontos?.some(
-                        p =>
-                            p.usuario_id === usuario.id &&
-                            p.tipo === 'entrada' &&
-                            p.horario.startsWith(dia)
-                    );
-                    return !temEntrada;
-                });
+        // 4. Calcula as faltas para cada usuário
+        const relatorio = usuarios.map(usuario => {
+            const diasFalta = diasUteis.filter(dia => {
+                // Conta quantos registros o usuário possui no dia atual
+                const registrosNoDia = (pontos || []).filter(p => {
+                    const dataPonto = p.horario.split('T')[0];
+                    return p.usuario_id === usuario.id && dataPonto === dia;
+                }).length;
 
-                return {
-                    usuario_id: usuario.id,
-                    nome: usuario.nome,
-                    email: usuario.email,
-                    cargo: usuario.cargo,
-                    total_faltas: faltas.length,
-                    dias_falta: faltas
-                };
-            })
-            .filter(u => u.total_faltas > 0);
+                // Falta é definida como menos de 4 registros no dia útil
+                return registrosNoDia < 4;
+            });
+
+            return {
+                usuario_id: usuario.id,
+                nome: usuario.nome,
+                cargo: usuario.cargo,
+                total_faltas: diasFalta.length,
+                dias_falta: diasFalta
+            };
+        });
 
         return res.json(relatorio);
     } catch (err) {
         return res.status(500).json({ error: 'Erro interno.', detalhe: err.message });
     }
 };
-
 // =========================================
-// RELATÓRIO DE ATRASOS
+// RELATORIO DE ATRASOS
+// =========================================
+// =========================================
+// RELATORIO DE ATRASOS (Baseado na tabela banco_horas)
 // =========================================
 exports.relatorioAtrasos = async (req, res) => {
     const { tenant_id, data_inicio, data_fim } = req.query;
 
     if (!tenant_id || !data_inicio || !data_fim) {
-        return res.status(400).json({
-            error: 'tenant_id, data_inicio e data_fim são obrigatórios.'
-        });
+        return res.status(400).json({ error: 'tenant_id, data_inicio e data_fim são obrigatórios.' });
     }
 
     try {
-        const gerente_id = req.user.id;
+        // 1. Dispara o gatilho (RPC) para garantir que os dados estejam atualizados
+        await supabase.rpc('get_banco_horas'); 
 
-        const { data: usuarios, error: usuariosError } = await supabase
-            .from('usuarios')
-            .select('id, nome, email, cargo')
+        // 2. Busca na tabela de banco_horas filtrando pelo período e tenant
+        // A tabela tem a coluna 'data' e 'saldo_minutos' conforme sua imagem
+        const { data: registros, error } = await supabase
+            .from('banco_horas')
+            .select(`
+                usuario_id, 
+                saldo_minutos, 
+                data, 
+                usuarios (nome, cargo)
+            `)
             .eq('tenant_id', tenant_id)
-            .eq('gerente_id', gerente_id);
+            .gte('data', data_inicio)
+            .lte('data', data_fim)
+            .order('data', { ascending: true });
 
-        if (usuariosError) {
-            return res.status(500).json({ error: usuariosError.message });
-        }
+        if (error) throw error;
 
-        const usuariosIds = usuarios.map(u => u.id);
+        // 3. Processa os dados (Atraso = saldo_minutos positivo na sua lógica)
+        // Se saldo_minutos positivo = atraso, então filtramos apenas esses
+        const atrasos = registros
+            .filter(r => r.saldo_minutos > 0) // Filtra apenas o que é saldo positivo (atraso)
+            .map(r => ({
+                usuario_id: r.usuario_id,
+                nome: r.usuarios?.nome || '—',
+                cargo: r.usuarios?.cargo || 'Funcionário',
+                data: r.data,
+                minutos_atraso: r.saldo_minutos // O valor que está na sua tabela
+            }));
 
-        const { data: pontos, error: pontosError } = await supabase
-            .from('pontos')
-            .select('usuario_id, horario, tipo')
-            .eq('tenant_id', tenant_id)
-            .eq('tipo', 'entrada')
-            .in('usuario_id', usuariosIds)
-            .gte('horario', `${data_inicio}T00:00:00`)
-            .lte('horario', `${data_fim}T23:59:59`);
-
-        if (pontosError) {
-            return res.status(500).json({ error: pontosError.message });
-        }
-
-        const HORARIO_LIMITE = 8 * 60 + 5;
-        const atrasos = [];
-
-        pontos?.forEach(ponto => {
-            const data = new Date(ponto.horario);
-            const minutosEntrada = data.getHours() * 60 + data.getMinutes();
-
-            if (minutosEntrada > HORARIO_LIMITE) {
-                const usuario = usuarios.find(u => u.id === ponto.usuario_id);
-                const minutosAtraso = minutosEntrada - (8 * 60);
-
-                atrasos.push({
-                    usuario_id: ponto.usuario_id,
-                    nome: usuario?.nome,
-                    email: usuario?.email,
-                    cargo: usuario?.cargo,
-                    data: data.toISOString().split('T')[0],
-                    horario_entrada: data.toTimeString().slice(0, 5),
-                    minutos_atraso: minutosAtraso
-                });
+        // 4. Agrupa e soma tudo para o front-end
+        const consolidado = atrasos.reduce((acc, curr) => {
+            if (!acc[curr.usuario_id]) {
+                acc[curr.usuario_id] = {
+                    usuario_id: curr.usuario_id,
+                    nome: curr.nome,
+                    cargo: curr.cargo,
+                    total_atraso_acumulado_mes: 0,
+                    atrasos: []
+                };
             }
-        });
+            acc[curr.usuario_id].total_atraso_acumulado_mes += curr.minutos_atraso;
+            acc[curr.usuario_id].atrasos.push({
+                data: curr.data,
+                minutos_atraso: curr.minutos_atraso
+            });
+            return acc;
+        }, {});
 
-        return res.json(atrasos);
+        return res.json(Object.values(consolidado));
+
     } catch (err) {
-        return res.status(500).json({ error: 'Erro interno.', detalhe: err.message });
+        return res.status(500).json({ error: 'Erro ao gerar relatório.', detalhe: err.message });
     }
 };
 
 // =========================================
-// RELATÓRIO BANCO DE HORAS
+// RELATORIO BANCO DE HORAS
 // =========================================
 exports.relatorioBancoHoras = async (req, res) => {
     const { tenant_id } = req.query;
 
-    if (!tenant_id) {
-        return res.status(400).json({ error: 'tenant_id é obrigatório.' });
-    }
+    if (!tenant_id) return res.status(400).json({ error: 'tenant_id e obrigatorio.' });
 
     try {
         const gerente_id = req.user.id;
 
-        // 1. Busca os usuários do gerente
         const { data: usuarios, error: usuariosError } = await supabase
             .from('usuarios')
             .select('id, nome, email, cargo')
@@ -249,19 +242,20 @@ exports.relatorioBancoHoras = async (req, res) => {
 
         const usuariosIds = usuarios.map(u => u.id);
 
-        // 2. Busca direto da nova tabela banco_horas
         const { data: bancoHoras, error: bancoError } = await supabase
-            .from('banco_horas')  // <-- nova tabela
+            .from('banco_horas')
             .select('usuario_id, saldo_minutos, updated_at')
             .eq('tenant_id', tenant_id)
             .in('usuario_id', usuariosIds);
 
         if (bancoError) return res.status(500).json({ error: bancoError.message });
 
-        // 3. Monta o relatório juntando com os dados do usuário
         const relatorio = bancoHoras.map(banco => {
             const usuario = usuarios.find(u => u.id === banco.usuario_id);
-            const saldo = banco.saldo_minutos;
+            const saldo = banco.saldo_minutos || 0;
+            
+            // Calcula o débito (minutos negativos)
+            const totalNegativo = saldo < 0 ? Math.abs(saldo) : 0;
 
             return {
                 usuario_id: banco.usuario_id,
@@ -269,6 +263,7 @@ exports.relatorioBancoHoras = async (req, res) => {
                 email: usuario?.email,
                 cargo: usuario?.cargo,
                 saldo_minutos: saldo,
+                total_minutos_negativos: totalNegativo, // Novo campo para identificar o débito total
                 saldo: saldo >= 0
                     ? `+${Math.floor(saldo / 60)}h${String(saldo % 60).padStart(2, '0')}m`
                     : `-${Math.floor(Math.abs(saldo) / 60)}h${String(Math.abs(saldo) % 60).padStart(2, '0')}m`,
@@ -277,24 +272,20 @@ exports.relatorioBancoHoras = async (req, res) => {
             };
         });
 
-        // 4. Ordena: negativos primeiro (mais críticos)
         relatorio.sort((a, b) => a.saldo_minutos - b.saldo_minutos);
-
         return res.json(relatorio);
-
     } catch (err) {
         return res.status(500).json({ error: 'Erro interno.', detalhe: err.message });
     }
 };
-
 // =========================================
-// RELATÓRIO DE FÉRIAS (REVISADO)
+// RELATORIO DE FERIAS
 // =========================================
 exports.relatorioFerias = async (req, res) => {
     const { tenant_id } = req.query;
 
     if (!tenant_id) {
-        return res.status(400).json({ error: 'tenant_id é obrigatório.' });
+        return res.status(400).json({ error: 'tenant_id e obrigatorio.' });
     }
 
     try {
@@ -328,7 +319,6 @@ exports.relatorioFerias = async (req, res) => {
             const pendentes = feriasUsuario.filter(f => f.status_ferias === 'pendente');
             const cumpridas = feriasUsuario.filter(f => f.status_ferias === 'cumprida');
 
-            // Identifica a férias PENDENTE mais antiga usando a data_ferias_prevista
             const pendenteMaisAntiga = pendentes.length > 0
                 ? pendentes.reduce((maisAntiga, atual) => {
                     return new Date(atual.data_ferias_prevista) < new Date(maisAntiga.data_ferias_prevista)
@@ -337,7 +327,6 @@ exports.relatorioFerias = async (req, res) => {
                 })
                 : null;
 
-            // Identifica a última férias cumprida apenas para exibir a data no front-end
             const ultimaCumprida = cumpridas.length > 0
                 ? cumpridas.reduce((maisRecente, atual) => {
                     return new Date(atual.data_fim || atual.data_inicio) >
@@ -347,7 +336,6 @@ exports.relatorioFerias = async (req, res) => {
                 })
                 : null;
 
-            // Passamos APENAS a pendente mais antiga para a função de cálculo
             const calc = calcularSituacaoFerias(pendenteMaisAntiga);
 
             return {
@@ -386,13 +374,13 @@ exports.relatorioFerias = async (req, res) => {
 };
 
 // =========================================
-// RELATÓRIO DE AFASTAMENTOS
+// RELATORIO DE AFASTAMENTOS
 // =========================================
 exports.relatorioAfastamentos = async (req, res) => {
     const { tenant_id } = req.query;
 
     if (!tenant_id) {
-        return res.status(400).json({ error: 'tenant_id é obrigatório.' });
+        return res.status(400).json({ error: 'tenant_id e obrigatorio.' });
     }
 
     try {
@@ -434,76 +422,93 @@ exports.relatorioAfastamentos = async (req, res) => {
     }
 };
 
-
 // =========================================
-// Funções auxiliares para calcular as cores
+// Funcoes auxiliares para calcular as cores
 // =========================================
 const calcularCorRisco = (score) => {
-    if (score == null) return 'cinza'; // Caso não tenha nota
+    if (score == null) return 'cinza';
     if (score < 50) return 'verde';
     if (score < 80) return 'amarelo';
-    return 'vermelho'; // 80 ou mais
+    return 'vermelho';
 };
 
 const calcularCorEngajamento = (score) => {
     if (score == null) return 'cinza';
     if (score < 40) return 'vermelho';
-    if (score <= 60) return 'amarelo'; // Entre 40 e 60
-    return 'verde'; // Maior que 60
+    if (score <= 60) return 'amarelo';
+    return 'verde';
 };
 
 const calcularCorPromocao = (score) => {
     if (score == null) return 'cinza';
     if (score > 50) return 'verde';
-    return 'cinza'; // 50 ou menos
+    return 'cinza';
 };
 
 // =========================================
-// Listar Relatórios de People Analytics
+// Listar Relatorios de People Analytics
 // =========================================
 exports.listarRelatoriosPA = async (req, res) => {
     try {
         const tenant_id = Number(req.user.tenant_id);
         const gerente_id = String(req.user.id);
 
-        // Busca apenas as colunas necessárias para o front-end
-        const { data, error } = await supabase
+        const meses = [
+            "janeiro", "fevereiro", "marco", "abril", "maio", "junho",
+            "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"
+        ];
+
+        const agora = new Date();
+        const mesIndex = agora.getMonth();
+
+        const mesAlvo = meses[(mesIndex - 1 + 12) % 12];
+        const mesFallback = meses[(mesIndex - 2 + 12) % 12];
+
+        let { data, error } = await supabase
             .from('people_analytics')
             .select(`
-                id,
-                nome,
-                cargo,
-                mes_referencia,
-                score_burnout,
-                score_turnover,
-                score_engajamento,
-                score_elegibilidade_promocao,
-                analise_pa,
-                sentimento_predominante
+                id, nome, cargo, mes_referencia,
+                score_burnout, score_turnover, score_engajamento,
+                score_elegibilidade_promocao, score_humor,
+                analise_pa, sentimento_predominante
             `)
             .eq('tenant_id', tenant_id)
             .eq('gerente_id', gerente_id)
+            .eq('mes_referencia', mesAlvo)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            return res.status(500).json({ error: error.message });
+        if (error) return res.status(500).json({ error: error.message });
+
+        if (!data || data.length === 0) {
+            const resultado = await supabase
+                .from('people_analytics')
+                .select(`
+                    id, nome, cargo, mes_referencia,
+                    score_burnout, score_turnover, score_engajamento,
+                    score_elegibilidade_promocao, score_humor,
+                    analise_pa, sentimento_predominante
+                `)
+                .eq('tenant_id', tenant_id)
+                .eq('gerente_id', gerente_id)
+                .eq('mes_referencia', mesFallback)
+                .order('created_at', { ascending: false });
+
+            if (resultado.error) return res.status(500).json({ error: resultado.error.message });
+            data = resultado.data;
         }
 
-        // Mapeia os dados do banco adicionando as cores calculadas
-        const relatoriosProcessados = data.map(funcionario => {
-            return {
-                ...funcionario,
-                cores: {
-                    burnout: calcularCorRisco(funcionario.score_burnout),
-                    turnover: calcularCorRisco(funcionario.score_turnover),
-                    engajamento: calcularCorEngajamento(funcionario.score_engajamento),
-                    promocao: calcularCorPromocao(funcionario.score_elegibilidade_promocao)
-                }
-            };
-        });
+        const relatoriosProcessados = (data || []).map(funcionario => ({
+            ...funcionario,
+            cores: {
+                burnout: calcularCorRisco(funcionario.score_burnout),
+                turnover: calcularCorRisco(funcionario.score_turnover),
+                engajamento: calcularCorEngajamento(funcionario.score_engajamento),
+                promocao: calcularCorPromocao(funcionario.score_elegibilidade_promocao)
+            }
+        }));
 
         return res.status(200).json(relatoriosProcessados);
     } catch (err) {
-        return res.status(500).json({ error: 'Erro interno ao buscar relatórios de People Analytics.' });
+        return res.status(500).json({ error: 'Erro interno ao buscar relatorios de People Analytics.' });
     }
 };

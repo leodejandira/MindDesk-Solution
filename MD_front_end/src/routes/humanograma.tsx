@@ -275,6 +275,7 @@ function HumanogramaPage() {
                       {/* Informações Resumidas do Card */}
                       <div className="flex flex-wrap gap-1.5">
                         <ScorePill label="Turnover" value={p.turnover} corStatus={p.cores.turnover} />
+                        <ScorePill label="Burnout"   value={p.burnout}     corStatus={p.cores.burnout} />
                         <ScorePill label="Engaj." value={p.engajamento} corStatus={p.cores.engajamento} />
                         <ScorePill label="Promoção" value={p.promocao} corStatus={p.cores.promocao} />
                       </div>

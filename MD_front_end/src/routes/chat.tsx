@@ -142,85 +142,87 @@ function ChatPage() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || isTyping) return;
+ // Substitua apenas a função handleFileUpload no ChatPage
 
-    const userMsg: Msg = {
-      id: Date.now(),
-      type: "user",
-      text: `Enviando documento: ${file.name}`,
-    };
+const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file || isTyping) return;
 
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("tenant_id", String(TENANT_ID));
-    formData.append("usuario_id", getLoggedUserId());
-    formData.append("data_emissao", new Date().toISOString().split("T")[0]);
-    formData.append("dias_afastamento", "1");
-    formData.append("motivo_cid", input.trim() || "Enviado via Chat de IA");
-
-    setInput("");
-
-    try {
-      // 1. Faz o upload e pega a URL
-      const uploadRes = await fetch(`${API}/atestados/upload`, {
-        method: "POST",
-        headers: { ...authHeaders() },
-        body: formData,
-      });
-
-      if (!uploadRes.ok) {
-        const errData = await uploadRes.json();
-        throw new Error(errData.error || "Erro no upload");
-      }
-
-      const uploadData = await uploadRes.json();
-      const urlAtestado = uploadData.url;
-
-      // 2. Manda a URL internamente pro orquestrador (usuário não vê isso)
-      const chatRes = await fetch(`${API}/chat/perguntar`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
-        body: JSON.stringify({
-          query: `Analise este atestado medico: ${urlAtestado}`,
-          tenant_id: TENANT_ID,
-        }),
-      });
-
-      if (!chatRes.ok) throw new Error("Erro ao analisar atestado");
-
-      const chatData = await chatRes.json();
-
-      // 3. Só mostra a resposta da IA pro usuário
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          type: "ai",
-          text: chatData.answer || "Atestado recebido e enviado para analise!",
-        },
-      ]);
-    } catch (error: any) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now() + 1,
-          type: "ai",
-          text: `Falha ao processar atestado: ${error.message || "Tente novamente."}`,
-        },
-      ]);
-    } finally {
-      setIsTyping(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+  const userMsg: Msg = {
+    id: Date.now(),
+    type: "user",
+    text: `Enviando documento: ${file.name}`,
   };
+
+  setMessages((prev) => [...prev, userMsg]);
+  setIsTyping(true);
+
+  const formData = new FormData();
+  formData.append("arquivo", file);
+  formData.append("tenant_id", String(TENANT_ID));
+  formData.append("usuario_id", getLoggedUserId());
+  formData.append("data_emissao", new Date().toISOString().split("T")[0]);
+  formData.append("dias_afastamento", "1");
+  formData.append("motivo_cid", input.trim() || "Enviado via Chat de IA");
+  setInput("");
+
+  try {
+    // ✅ authHeaders() sem Content-Type para não quebrar o boundary do FormData
+    const { "Content-Type": _removed, ...headersMultipart } = authHeaders() as Record<string, string>;
+
+    const uploadRes = await fetch(`${API}/atestados/upload`, {
+      method: "POST",
+      headers: headersMultipart, // ← sem Content-Type; o browser define sozinho
+      body: formData,
+    });
+
+    if (!uploadRes.ok) {
+      const errData = await uploadRes.json();
+      throw new Error(errData.error || "Erro no upload");
+    }
+
+    const uploadData = await uploadRes.json();
+    const urlAtestado = uploadData.url;
+
+    // Envia a URL pro chat como texto — a rota /chat/perguntar aceita JSON normalmente
+    const chatRes = await fetch(`${API}/chat/perguntar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({
+        query: `Analise este atestado medico: ${urlAtestado}`,
+        tenant_id: TENANT_ID,
+      }),
+    });
+
+    if (!chatRes.ok) throw new Error("Erro ao analisar atestado");
+
+    const chatData = await chatRes.json();
+
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now() + 1,
+        type: "ai",
+        text: chatData.answer || "Atestado recebido e enviado para análise!",
+      },
+    ]);
+  } catch (error: any) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: Date.now() + 1,
+        type: "ai",
+        text: `Falha ao processar atestado: ${error.message || "Tente novamente."}`,
+      },
+    ]);
+  } finally {
+    setIsTyping(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+};
 
   const showErrorAlert = () => {
     setMessages((prev) => [

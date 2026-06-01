@@ -129,49 +129,67 @@ const MENU: MenuItem[] = [
 // =========================================
 // ESTILOS DOS AVISOS
 // =========================================
-function getAvisoStyles(prioridade: string) {
-  switch (prioridade) {
+// =========================================
+// ESTILOS DOS AVISOS
+// =========================================
+function getAvisoStyles(prioridade: string, tipo?: string) {
+  // Afastamentos pendentes sempre em laranja (alta)
+  const p = prioridade;
+
+  switch (p) {
     case "critica":
       return {
-        card: "bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20",
-        badge: "text-red-700 dark:text-red-200 bg-red-100 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20",
-        text: "text-red-700 dark:text-red-200",
+        card: "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40",
+        badge: "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/40",
+        text: "text-red-700 dark:text-red-300",
+        dot: "bg-red-500",
       };
     case "alta":
       return {
-        card: "bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-orange-500/20",
-        badge: "text-orange-700 dark:text-orange-200 bg-orange-100 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20",
-        text: "text-orange-700 dark:text-orange-200",
+        card: "bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900/40",
+        badge: "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200 dark:border-orange-900/40",
+        text: "text-orange-700 dark:text-orange-300",
+        dot: "bg-orange-500",
       };
     case "media":
       return {
-        card: "bg-yellow-50 dark:bg-yellow-500/10 border-yellow-200 dark:border-yellow-500/20",
-        badge: "text-yellow-700 dark:text-yellow-100 bg-yellow-100 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/20",
-        text: "text-yellow-700 dark:text-yellow-100",
+        card: "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900/40",
+        badge: "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 border border-green-200 dark:border-green-900/40",
+        text: "text-green-700 dark:text-green-300",
+        dot: "bg-green-500",
+      };
+    case "baixa":
+      return {
+        card: "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900/40",
+        badge: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40",
+        text: "text-blue-700 dark:text-blue-300",
+        dot: "bg-blue-500",
       };
     default:
       return {
-        card: "bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20",
-        badge: "text-blue-700 dark:text-blue-200 bg-blue-100 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20",
-        text: "text-blue-700 dark:text-blue-200",
+        card: "bg-zinc-100 dark:bg-white/[0.04] border-black/5 dark:border-white/10",
+        badge: "bg-zinc-200 text-zinc-600 dark:bg-white/10 dark:text-white/50 border border-zinc-200 dark:border-white/10",
+        text: "text-zinc-700 dark:text-white/70",
+        dot: "bg-zinc-400",
       };
   }
 }
 
 function getPrioridadeLabel(prioridade: string) {
   switch (prioridade) {
-    case "critica": return "Crítico";
+    case "critica": return "Critica";
     case "alta":    return "Urgente";
-    case "media":   return "Atenção";
+    case "media":   return "Disponível";
+    case "baixa":   return "Em breve";
     default:        return "Informativo";
   }
 }
 
 function getTipoLabel(tipo: string) {
   switch (tipo) {
-    case "férias":       return "Férias";
-    case "afastamento":  return "Afastamento";
-    default:             return tipo;
+    case "férias":      return "Férias";
+    case "afastamento": return "Afastamento";
+    default:            return tipo;
   }
 }
 
@@ -179,12 +197,12 @@ function getTipoLabel(tipo: string) {
 // CARD GERENTE
 // =========================================
 function AvisoCardGerente({ aviso }: { aviso: Aviso }) {
-  const styles = getAvisoStyles(aviso.prioridade);
+  const styles = getAvisoStyles(aviso.prioridade, aviso.tipo);
 
   return (
     <li className={`p-4 rounded-2xl border ${styles.card}`}>
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${styles.badge}`}>
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${styles.badge}`}>
           {getTipoLabel(aviso.tipo)} • {getPrioridadeLabel(aviso.prioridade)}
         </span>
         {(aviso.dias_restantes ?? 0) > 0 && (
@@ -197,8 +215,8 @@ function AvisoCardGerente({ aviso }: { aviso: Aviso }) {
         {aviso.mensagem}
       </p>
       {(aviso.nome || aviso.cargo) && (
-        <p className="text-xs text-zinc-500 dark:text-white/45 mt-2">
-          {aviso.nome} • {aviso.cargo}
+        <p className="text-xs text-zinc-500 dark:text-white/40 mt-2">
+          {aviso.nome}{aviso.cargo ? ` • ${aviso.cargo}` : ""}
         </p>
       )}
     </li>
@@ -209,12 +227,12 @@ function AvisoCardGerente({ aviso }: { aviso: Aviso }) {
 // CARD FUNCIONÁRIO
 // =========================================
 function AvisoCardFuncionario({ aviso }: { aviso: Aviso }) {
-  const styles = getAvisoStyles(aviso.prioridade);
+  const styles = getAvisoStyles(aviso.prioridade, aviso.tipo);
 
   return (
     <li className={`p-4 rounded-2xl border ${styles.card}`}>
       <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-        <span className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${styles.badge}`}>
+        <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${styles.badge}`}>
           {getTipoLabel(aviso.tipo)} • {getPrioridadeLabel(aviso.prioridade)}
         </span>
         {(aviso.dias_restantes ?? 0) > 0 && (
@@ -223,11 +241,11 @@ function AvisoCardFuncionario({ aviso }: { aviso: Aviso }) {
           </span>
         )}
       </div>
-      <p className={`text-sm leading-relaxed font-medium ${styles.text}`}>
+      <p className={`text-sm font-medium leading-relaxed ${styles.text}`}>
         {aviso.mensagem}
       </p>
       {aviso.data_vencimento && aviso.tipo === "férias" && (
-        <p className="text-xs text-zinc-500 dark:text-white/45 mt-2">
+        <p className="text-xs text-zinc-500 dark:text-white/40 mt-2">
           Vencimento: {aviso.data_vencimento.split("-").reverse().join("/")}
         </p>
       )}
