@@ -11,6 +11,7 @@ export default function AppLayout() {
       <Stack.Screen name="manager" />
       <Stack.Screen name="chat" />
       <Stack.Screen name="qrcode" />
+      <Stack.Screen name="ponto" />
       <Stack.Screen name="cursos" />
       <Stack.Screen name="configuracoes" />
       <Stack.Protected guard={isAdmin} redirectTo="/manager">
@@ -18,6 +19,7 @@ export default function AppLayout() {
         <Stack.Screen name="humanograma" />
         <Stack.Screen name="funcionarios" />
         <Stack.Screen name="documentos" />
+        <Stack.Screen name="revisao-ponto" />
       </Stack.Protected>
     </Stack>
   );

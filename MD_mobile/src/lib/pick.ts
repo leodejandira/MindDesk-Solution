@@ -17,12 +17,16 @@ export async function pickDocument(): Promise<LocalFile | null> {
 }
 
 /** Foto da câmera ou da galeria (ex.: atestado). */
-export async function pickPhoto(source: "camera" | "library"): Promise<LocalFile | null> {
+export async function pickPhoto(source: "camera" | "library", front = false): Promise<LocalFile | null> {
   if (source === "camera") {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) throw new Error("Permissão da câmera negada.");
   }
-  const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.7 };
+  const opts: ImagePicker.ImagePickerOptions = {
+    mediaTypes: ["images"],
+    quality: front ? 0.5 : 0.7, // selfie de ponto mais leve; atestado mantém qualidade para o OCR
+    ...(front && { cameraType: ImagePicker.CameraType.front }),
+  };
   const r = source === "camera" ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
   if (r.canceled || !r.assets?.[0]) return null;
   const a = r.assets[0];

@@ -40,6 +40,15 @@ npm run test:e2e
 
 O E2E percorre login, chat, QR de ponto, cursos, configurações, relatórios (com aprovação de atestado), CRUD de funcionários, documentos/cursos e humanograma. As telas ficam salvas em `e2e/shots/`.
 
+## Ponto com selfie e geolocalização
+
+1. Rode uma vez, no SQL Editor do Supabase, o arquivo `MD_bb/migrations/2026-11-10_ponto_selfie_geolocalizacao.sql`. Ele cria a tabela `locais_trabalho`, as colunas novas em `pontos` e o bucket **privado** `pontos`.
+2. O gerente abre **Revisão de Ponto → Locais de trabalho** no próprio local e cadastra usando a localização do celular (raio padrão: 150 m).
+3. O funcionário usa **Registrar Ponto**. A ordem das marcações é automática: entrada → almoço → retorno → saída.
+4. O ponto vai para **revisão** se não houver local cadastrado, se a posição estiver fora do raio, se o GPS tiver precisão pior que 100 m ou se o Android indicar localização falsa. O gerente aprova ou rejeita vendo a selfie e o mapa.
+
+O app usa `expo-location`, que é um módulo nativo novo. Por isso é preciso **gerar o APK de novo**.
+
 ## Gerar o APK (EAS)
 
 1. Publique o back-end com **HTTPS**. O Android bloqueia HTTP em builds de release.

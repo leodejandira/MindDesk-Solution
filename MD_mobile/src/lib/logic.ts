@@ -243,3 +243,34 @@ export function matches(q: string, ...fields: (string | undefined | null)[]): bo
   const s = q.trim().toLowerCase();
   return !s || fields.some((f) => (f || "").toLowerCase().includes(s));
 }
+
+// ---------- Ponto com selfie ----------
+export const TIPO_PONTO_LABEL: Record<string, string> = {
+  entrada: "Entrada",
+  almoco: "Saída para almoço",
+  retorno_almoco: "Retorno do almoço",
+  saida: "Saída",
+};
+
+export const STATUS_PONTO: Record<string, { label: string; tone: "green" | "yellow" | "red" }> = {
+  aprovado: { label: "Aprovado", tone: "green" },
+  pendente_revisao: { label: "Em revisão", tone: "yellow" },
+  rejeitado: { label: "Rejeitado", tone: "red" },
+};
+
+/** 45 → "45 m"; 2560 → "2,6 km"; null → "-". */
+export function formatDistancia(m?: number | null): string {
+  if (m == null) return "-";
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`;
+}
+
+/** ISO → "10/11/2026 21:37" no horário do aparelho. */
+export function formatDataHora(iso?: string | null): string {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "-";
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+export const mapsUrl = (lat: number, lng: number) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;

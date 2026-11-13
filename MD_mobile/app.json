@@ -19,7 +19,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,13 +34,29 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "O MindDesk usa a câmera para fotografar atestados médicos."
+          "cameraPermission": "O MindDesk usa a câmera para fotografar atestados médicos e registrar o ponto com selfie."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O MindDesk usa sua localização para registrar o ponto."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "a84dd254-5d53-4379-ae16-0c7645811e51"
+      }
     }
   }
 }

@@ -7,11 +7,11 @@
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://SEU-BACKEND-AQUI" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://configuring-diffs-independence-boxes.trycloudflare.com" }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://SEU-BACKEND-AQUI" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://configuring-diffs-independence-boxes.trycloudflare.com" }
     }
   }
 }

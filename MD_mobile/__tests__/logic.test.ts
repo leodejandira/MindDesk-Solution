@@ -111,3 +111,28 @@ test("matches busca em vários campos, sem diferenciar caixa", () => {
   expect(matches("dev", "x", "Desenvolvedor")).toBe(false);
   expect(matches("", "qualquer")).toBe(true);
 });
+
+describe("ponto com selfie", () => {
+  const { formatDistancia, formatDataHora, mapsUrl, TIPO_PONTO_LABEL, STATUS_PONTO } = require("@/lib/logic");
+
+  test("formatDistancia", () => {
+    expect(formatDistancia(44.6)).toBe("45 m");
+    expect(formatDistancia(2560)).toBe("2,6 km");
+    expect(formatDistancia(null)).toBe("-");
+  });
+
+  test("formatDataHora usa o horário do aparelho", () => {
+    const d = new Date(2026, 10, 10, 9, 5); // 10/11/2026 09:05 local
+    expect(formatDataHora(d.toISOString())).toBe("10/11/2026 09:05");
+    expect(formatDataHora("lixo")).toBe("-");
+  });
+
+  test("rótulos cobrem os 4 tipos e 3 status do back-end", () => {
+    expect(Object.keys(TIPO_PONTO_LABEL)).toEqual(["entrada", "almoco", "retorno_almoco", "saida"]);
+    expect(Object.keys(STATUS_PONTO)).toEqual(["aprovado", "pendente_revisao", "rejeitado"]);
+  });
+
+  test("mapsUrl", () => {
+    expect(mapsUrl(-23.5, -46.6)).toBe("https://www.google.com/maps/search/?api=1&query=-23.5,-46.6");
+  });
+});

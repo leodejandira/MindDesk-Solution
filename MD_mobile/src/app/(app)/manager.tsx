@@ -12,7 +12,9 @@ type Item = { icon: IconName; title: string; desc: string; to: Href; admin?: boo
 
 const MENU: Item[] = [
   { icon: "chatbubble-ellipses-outline", title: "Chat RH", desc: "Converse com o assistente virtual", to: "/chat" },
+  { icon: "camera-outline", title: "Registrar Ponto", desc: "Selfie com localização", to: "/ponto" },
   { icon: "qr-code-outline", title: "Bater Ponto", desc: "QR Code para o leitor", to: "/qrcode" },
+  { icon: "shield-checkmark-outline", title: "Revisão de Ponto", desc: "Selfies e locais de trabalho", to: "/revisao-ponto", admin: true },
   { icon: "bar-chart-outline", title: "Relatórios", desc: "Faltas, atrasos e desempenho", to: "/relatorios", admin: true },
   { icon: "pulse-outline", title: "Humanograma", desc: "Indicadores e análise de pessoas", to: "/humanograma", admin: true },
   { icon: "people-outline", title: "Funcionários", desc: "Gerenciar colaboradores", to: "/funcionarios", admin: true },
