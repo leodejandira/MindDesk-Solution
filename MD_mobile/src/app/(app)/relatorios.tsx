@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Linking, Modal, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { DateField } from "@/components/DateField";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Badge, Bars, Button, Card, Empty, Icon, Input, Loading, Row, Screen, Segmented, Stat, T, type IconName } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -23,6 +24,7 @@ export default function Relatorios() {
   const { c } = useTheme();
   const [open, setOpen] = useState<Tipo | null>(null);
   return (
+    <>
     <Screen title="Relatórios">
       <T muted>Visualize indicadores, métricas e informações importantes da equipe em tempo real.</T>
       {REPORTS.map((r) => (
@@ -41,6 +43,8 @@ export default function Relatorios() {
       ))}
       {open && <Relatorio tipo={open} onClose={() => setOpen(null)} />}
     </Screen>
+    <EntryAnimation name="relatorios" title="Relatórios" subtitle="Reunindo faltas, atrasos e banco de horas" />
+    </>
   );
 }
 

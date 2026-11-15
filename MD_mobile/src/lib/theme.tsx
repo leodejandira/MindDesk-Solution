@@ -1,28 +1,38 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { useColorScheme } from "react-native";
 import { storage } from "./storage";
 
+// Tokens convertidos do styles.css da web (oklch → hex), mesma identidade azul do MindDesk.
 const light = {
-  bg: "#F4F7FB",
+  bg: "#F7FBFD",
+  bgGlow: "#DCEBFA", // radial-gradient do topo (.md-bg)
   card: "#FFFFFF",
-  text: "#0F172A",
-  muted: "#64748B",
-  border: "#E2E8F0",
-  primary: "#0057B7",
-  primarySoft: "#E6EFFA",
-  danger: "#DC2626",
-  hero: "#132554",
+  cardBorder: "rgba(0,0,0,0.06)", // border-black/5
+  text: "#0B1C2C",
+  muted: "#576574",
+  border: "#DCE6EE",
+  input: "#FFFFFF",
+  primary: "#005FC6",
+  primaryText: "#FFFFFF",
+  primarySoft: "rgba(0,95,198,0.10)", // bg-primary/10
+  accent: "#FF8E6E",
+  danger: "#E62C2C",
+  hero: ["#111827", "#172554", "#0F172A"] as const, // bg-gradient-to-br do card de boas-vindas
 };
 const dark: typeof light = {
-  bg: "#0B0F17",
-  card: "#151A23",
-  text: "#F1F5F9",
-  muted: "#94A3B8",
-  border: "#253042",
-  primary: "#4C8DF6",
-  primarySoft: "#16243B",
-  danger: "#F87171",
-  hero: "#132554",
+  bg: "#0A121F",
+  bgGlow: "#0E2A52",
+  card: "#121B29", // dark:bg-white/[0.04] sobre o fundo (sólido para modais)
+  cardBorder: "rgba(255,255,255,0.10)", // dark:border-white/10
+  text: "#EFF6FB",
+  muted: "#97A7B7",
+  border: "#283345",
+  input: "#162030",
+  primary: "#4C9FFF",
+  primaryText: "#030915",
+  primarySoft: "rgba(76,159,255,0.14)",
+  accent: "#FF8E6E",
+  danger: "#FF5251",
+  hero: ["#111827", "#172554", "#0F172A"] as const,
 };
 export type Colors = typeof light;
 
@@ -35,29 +45,48 @@ export const TONES = {
   yellow: { bg: "#FEF3C7", fg: "#B45309" },
   gray: { bg: "#F1F5F9", fg: "#475569" },
   violet: { bg: "#EDE9FE", fg: "#6D28D9" },
-} as const;
+};
 export type ToneName = keyof typeof TONES;
+export type Tones = typeof TONES;
+
+/** No escuro: fundo translúcido + texto claro (padrão bg-x-500/15 text-x-300 da web). */
+const TONES_DARK: Tones = {
+  red: { bg: "rgba(239,68,68,0.16)", fg: "#FCA5A5" },
+  orange: { bg: "rgba(249,115,22,0.16)", fg: "#FDBA74" },
+  green: { bg: "rgba(34,197,94,0.16)", fg: "#86EFAC" },
+  blue: { bg: "rgba(59,130,246,0.18)", fg: "#93C5FD" },
+  yellow: { bg: "rgba(234,179,8,0.16)", fg: "#FDE047" },
+  gray: { bg: "rgba(148,163,184,0.16)", fg: "#CBD5E1" },
+  violet: { bg: "rgba(139,92,246,0.18)", fg: "#C4B5FD" },
+};
+
+/** Sora, a mesma fonte do site (carregada no _layout raiz). */
+export const FONT = { regular: "Sora_400Regular", medium: "Sora_500Medium", semibold: "Sora_600SemiBold", bold: "Sora_700Bold" };
 
 const KEY = "minddesk_theme";
-type Ctx = { c: Colors; dark: boolean; toggle: () => void };
-const ThemeCtx = createContext<Ctx>({ c: light, dark: false, toggle: () => {} });
+type Ctx = { c: Colors; tones: Tones; dark: boolean; toggle: () => void };
+const ThemeCtx = createContext<Ctx>({ c: dark, tones: TONES_DARK, dark: true, toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const system = useColorScheme();
-  const [mode, setMode] = useState<"light" | "dark" | null>(null);
+  // Escuro por padrão, como a identidade do app; o usuário pode trocar em Configurações.
+  const [mode, setMode] = useState<"light" | "dark">("dark");
 
   useEffect(() => {
     storage.get(KEY).then((v) => (v === "light" || v === "dark") && setMode(v));
   }, []);
 
-  const isDark = (mode ?? system) === "dark";
+  const isDark = mode === "dark";
   const toggle = () => {
     const next = isDark ? "light" : "dark";
     setMode(next);
     storage.set(KEY, next);
   };
 
-  return <ThemeCtx.Provider value={{ c: isDark ? dark : light, dark: isDark, toggle }}>{children}</ThemeCtx.Provider>;
+  return (
+    <ThemeCtx.Provider value={{ c: isDark ? dark : light, tones: isDark ? TONES_DARK : TONES, dark: isDark, toggle }}>
+      {children}
+    </ThemeCtx.Provider>
+  );
 }
 
 export const useTheme = () => useContext(ThemeCtx);

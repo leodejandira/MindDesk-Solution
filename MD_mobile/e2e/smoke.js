@@ -76,8 +76,9 @@ const check = async (name, fn) => {
     await shot("03-chat");
     await back();
   });
-  await check("QR code de ponto renderiza", async () => {
-    await tap("Bater Ponto");
+  await check("QR code oculto no menu (rota segue ativa)", async () => {
+    if (await page.getByText("Bater Ponto", { exact: true }).count()) throw new Error("item Bater Ponto visível");
+    await page.goto("http://localhost:5050/qrcode");
     await page.locator("svg rect, svg path").first().waitFor({ timeout: 8000 });
     await see("Código seguro (renovado automaticamente)");
     await shot("04-qrcode");

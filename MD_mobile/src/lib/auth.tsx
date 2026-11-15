@@ -11,6 +11,9 @@ type Auth = {
   isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** true logo após o login: o layout toca a animação "first" uma vez. */
+  welcome: boolean;
+  endWelcome: () => void;
 };
 
 const AuthCtx = createContext<Auth>(null as unknown as Auth);
@@ -18,6 +21,7 @@ const AuthCtx = createContext<Auth>(null as unknown as Auth);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<JwtPayload | null>(null);
+  const [welcome, setWelcome] = useState(false);
 
   const apply = useCallback((token: string | null) => {
     const payload = decodeJwt(token);
@@ -41,11 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { token } = await api<{ token: string }>("/auth/login", { method: "POST", body: { email, password } });
     await storage.set(KEY, token);
+    setWelcome(true);
     apply(token);
   };
 
   return (
-    <AuthCtx.Provider value={{ ready, user, isAdmin: user?.role === "admin", signIn, signOut }}>
+    <AuthCtx.Provider value={{ ready, user, isAdmin: user?.role === "admin", signIn, signOut, welcome, endWelcome: () => setWelcome(false) }}>
       {children}
     </AuthCtx.Provider>
   );

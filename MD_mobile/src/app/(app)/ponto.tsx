@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Badge, Button, Card, Icon, Notice, Row, Screen, T } from "@/components/ui";
 import { api, appendFile } from "@/lib/api";
 import { posicaoAtual } from "@/lib/location";
@@ -50,6 +51,7 @@ export default function RegistrarPonto() {
   const status = resultado ? STATUS_PONTO[resultado.status_validacao] : null;
 
   return (
+    <>
     <Screen title="Registrar Ponto">
       <Card style={{ alignItems: "center", gap: 12 }}>
         <Icon name="camera-outline" size={44} color={c.primary} />
@@ -88,5 +90,7 @@ export default function RegistrarPonto() {
         </Card>
       )}
     </Screen>
+    <EntryAnimation name="ponto" title="Registrar Ponto" subtitle="Preparando câmera e localização" />
+    </>
   );
 }

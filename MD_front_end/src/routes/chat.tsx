@@ -9,6 +9,7 @@ import {
   PageShell,
   Card,
 } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 
 import {
   ArrowLeft,
@@ -249,6 +250,7 @@ const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
 
   return (
     <PageShell>
+      <EntryAnimation name="chat" title="Chat RH" subtitle="Conectando ao assistente virtual" />
       <div
         className="
           min-h-screen

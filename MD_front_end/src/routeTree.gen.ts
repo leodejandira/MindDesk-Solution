@@ -9,8 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RevisaoPontoRouteImport } from './routes/revisao-ponto'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as QrcodeRouteImport } from './routes/qrcode'
+import { Route as PontoRouteImport } from './routes/ponto'
 import { Route as ManagerRouteImport } from './routes/manager'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HumanogramaRouteImport } from './routes/humanograma'
@@ -21,6 +23,11 @@ import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RevisaoPontoRoute = RevisaoPontoRouteImport.update({
+  id: '/revisao-ponto',
+  path: '/revisao-ponto',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -29,6 +36,11 @@ const RelatoriosRoute = RelatoriosRouteImport.update({
 const QrcodeRoute = QrcodeRouteImport.update({
   id: '/qrcode',
   path: '/qrcode',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PontoRoute = PontoRouteImport.update({
+  id: '/ponto',
+  path: '/ponto',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ManagerRoute = ManagerRouteImport.update({
@@ -87,8 +99,10 @@ export interface FileRoutesByFullPath {
   '/humanograma': typeof HumanogramaRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
+  '/ponto': typeof PontoRoute
   '/qrcode': typeof QrcodeRoute
   '/relatorios': typeof RelatoriosRoute
+  '/revisao-ponto': typeof RevisaoPontoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,8 +114,10 @@ export interface FileRoutesByTo {
   '/humanograma': typeof HumanogramaRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
+  '/ponto': typeof PontoRoute
   '/qrcode': typeof QrcodeRoute
   '/relatorios': typeof RelatoriosRoute
+  '/revisao-ponto': typeof RevisaoPontoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,8 +130,10 @@ export interface FileRoutesById {
   '/humanograma': typeof HumanogramaRoute
   '/login': typeof LoginRoute
   '/manager': typeof ManagerRoute
+  '/ponto': typeof PontoRoute
   '/qrcode': typeof QrcodeRoute
   '/relatorios': typeof RelatoriosRoute
+  '/revisao-ponto': typeof RevisaoPontoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -129,8 +147,10 @@ export interface FileRouteTypes {
     | '/humanograma'
     | '/login'
     | '/manager'
+    | '/ponto'
     | '/qrcode'
     | '/relatorios'
+    | '/revisao-ponto'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,8 +162,10 @@ export interface FileRouteTypes {
     | '/humanograma'
     | '/login'
     | '/manager'
+    | '/ponto'
     | '/qrcode'
     | '/relatorios'
+    | '/revisao-ponto'
   id:
     | '__root__'
     | '/'
@@ -155,8 +177,10 @@ export interface FileRouteTypes {
     | '/humanograma'
     | '/login'
     | '/manager'
+    | '/ponto'
     | '/qrcode'
     | '/relatorios'
+    | '/revisao-ponto'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -169,12 +193,21 @@ export interface RootRouteChildren {
   HumanogramaRoute: typeof HumanogramaRoute
   LoginRoute: typeof LoginRoute
   ManagerRoute: typeof ManagerRoute
+  PontoRoute: typeof PontoRoute
   QrcodeRoute: typeof QrcodeRoute
   RelatoriosRoute: typeof RelatoriosRoute
+  RevisaoPontoRoute: typeof RevisaoPontoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/revisao-ponto': {
+      id: '/revisao-ponto'
+      path: '/revisao-ponto'
+      fullPath: '/revisao-ponto'
+      preLoaderRoute: typeof RevisaoPontoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
@@ -187,6 +220,13 @@ declare module '@tanstack/react-router' {
       path: '/qrcode'
       fullPath: '/qrcode'
       preLoaderRoute: typeof QrcodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ponto': {
+      id: '/ponto'
+      path: '/ponto'
+      fullPath: '/ponto'
+      preLoaderRoute: typeof PontoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/manager': {
@@ -265,8 +305,10 @@ const rootRouteChildren: RootRouteChildren = {
   HumanogramaRoute: HumanogramaRoute,
   LoginRoute: LoginRoute,
   ManagerRoute: ManagerRoute,
+  PontoRoute: PontoRoute,
   QrcodeRoute: QrcodeRoute,
   RelatoriosRoute: RelatoriosRoute,
+  RevisaoPontoRoute: RevisaoPontoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

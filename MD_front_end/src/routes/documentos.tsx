@@ -11,6 +11,7 @@ import {
   Logo,
   Alert,
 } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 import docsIllus from "@/assets/illus-docs.png";
 
 export const Route = createFileRoute("/documentos")({
@@ -73,6 +74,7 @@ function DocumentosPage() {
 
   return (
     <PageShell>
+      <EntryAnimation name="documentos" title="Documentos & Cursos" subtitle="Organizando seus arquivos" />
       <div className="min-h-screen px-4 py-5 sm:px-6 lg:px-10">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-5">

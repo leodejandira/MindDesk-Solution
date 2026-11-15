@@ -1,17 +1,14 @@
 {
-  "cli": {
-    "version": ">= 16.0.0",
-    "appVersionSource": "remote"
-  },
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
   "build": {
     "preview": {
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": { "EXPO_PUBLIC_API_URL": "https://configuring-diffs-independence-boxes.trycloudflare.com" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://candle-activities-shame-appearing.trycloudflare.com", "EXPO_PUBLIC_USE_RN_FETCH": "1" }
     },
     "production": {
       "autoIncrement": true,
-      "env": { "EXPO_PUBLIC_API_URL": "https://configuring-diffs-independence-boxes.trycloudflare.com" }
+      "env": { "EXPO_PUBLIC_API_URL": "https://candle-activities-shame-appearing.trycloudflare.com", "EXPO_PUBLIC_USE_RN_FETCH": "1" }
     }
   }
 }

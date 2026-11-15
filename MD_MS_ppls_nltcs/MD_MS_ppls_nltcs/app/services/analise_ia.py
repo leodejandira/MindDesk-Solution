@@ -25,7 +25,7 @@ def gerar_analise_funcionario(row):
     
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo", # Ou gpt-4o
+            model="gpt-4o-mini", # Ou gpt-4o
             messages=[{"role": "user", "content": prompt}],
             max_tokens=100
         )

@@ -1,9 +1,7 @@
 version: '3.8'
 
 services:
-  # ==========================================
-  # BACK-END PRINCIPAL (NODE.JS)
-  # ==========================================
+
   api:
     build:
       context: ./MD_back_end/MindDeskRH
@@ -16,9 +14,6 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  # ==========================================
-  # MICROSSERVIÇOS (PYTHON / UVICORN)
-  # ==========================================
   minddesk-documentos:
     build:
       context: ./MD_MS_atestado

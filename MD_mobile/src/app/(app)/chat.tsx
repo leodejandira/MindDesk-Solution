@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Icon, Screen, confirm } from "@/components/ui";
 import { api, appendFile, type LocalFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isoDate, parseInline } from "@/lib/logic";
 import { pickDocument, pickPhoto } from "@/lib/pick";
-import { useTheme } from "@/lib/theme";
+import { FONT, useTheme } from "@/lib/theme";
 
 type Msg = { id: number; type: "ai" | "user"; text: string };
 const BOAS_VINDAS: Msg = { id: 0, type: "ai", text: "Olá! Sou o assistente virtual da MindDesk. Como posso ajudar com dúvidas de RH hoje?" };
@@ -75,6 +76,7 @@ export default function Chat() {
   const novaConversa = async () => (await confirm("Iniciar uma nova conversa?")) && setMsgs([BOAS_VINDAS]);
 
   return (
+    <>
     <Screen
       title="MindDesk Assistant"
       scroll={false}
@@ -94,7 +96,7 @@ export default function Chat() {
           renderItem={({ item }) => <Bubble m={item} />}
           ListFooterComponent={busy ? <ActivityIndicator style={{ alignSelf: "flex-start", margin: 8 }} color={c.primary} /> : undefined}
         />
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderTopWidth: 1, borderColor: c.border, backgroundColor: c.card }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, margin: 12, padding: 6, paddingLeft: 12, borderRadius: 24, borderWidth: 1, borderColor: c.cardBorder, backgroundColor: c.card }}>
           <Pressable onPress={attach} disabled={busy} hitSlop={8} accessibilityLabel="Anexar atestado">
             <Icon name="attach" size={26} color={busy ? c.border : c.muted} />
           </Pressable>
@@ -105,44 +107,49 @@ export default function Chat() {
             editable={!busy}
             placeholder="Escreva algo ou anexe um atestado..."
             placeholderTextColor={c.muted}
-            style={{ flex: 1, minHeight: 44, maxHeight: 120, paddingHorizontal: 12, borderRadius: 14, backgroundColor: c.bg, color: c.text }}
+            style={{ flex: 1, minHeight: 44, maxHeight: 120, paddingHorizontal: 8, paddingTop: 12, color: c.text, fontFamily: FONT.regular, fontSize: 15 }}
             multiline
           />
           <Pressable
             onPress={send}
             disabled={busy || !input.trim()}
             accessibilityLabel="Enviar"
-            style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: c.primary, alignItems: "center", justifyContent: "center", opacity: busy || !input.trim() ? 0.5 : 1 }}
+            style={{ width: 44, height: 44, borderRadius: 18, backgroundColor: c.primary, alignItems: "center", justifyContent: "center", opacity: busy || !input.trim() ? 0.5 : 1 }}
           >
-            <Icon name="send" size={18} color="#FFF" />
+            <Icon name="send" size={18} color={c.primaryText} />
           </Pressable>
         </View>
       </KeyboardAvoidingView>
     </Screen>
+    <EntryAnimation name="chat" title="Chat RH" subtitle="Conectando ao assistente virtual" />
+    </>
   );
 }
 
 function Bubble({ m }: { m: Msg }) {
   const { c } = useTheme();
   const user = m.type === "user";
-  const color = user ? "#FFF" : c.text;
+  const color = user ? c.primaryText : c.text;
   return (
     <View
       style={{
         alignSelf: user ? "flex-end" : "flex-start",
         maxWidth: "85%",
-        padding: 12,
-        borderRadius: 18,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 22,
+        borderBottomRightRadius: user ? 6 : 22,
+        borderBottomLeftRadius: user ? 22 : 6,
         backgroundColor: user ? c.primary : c.card,
         borderWidth: user ? 0 : 1,
-        borderColor: c.border,
+        borderColor: c.cardBorder,
       }}
     >
-      <Text style={{ color, fontSize: 15, lineHeight: 21 }}>
+      <Text style={{ color, fontSize: 15, lineHeight: 22, fontFamily: FONT.regular }}>
         {m.text.split("\n").map((line, i, arr) => (
           <Text key={i}>
             {parseInline(line).map((seg, j) => (
-              <Text key={j} style={{ fontWeight: seg.bold ? "700" : "400", fontStyle: seg.italic ? "italic" : "normal" }}>
+              <Text key={j} style={{ fontFamily: seg.bold ? FONT.bold : FONT.regular, fontStyle: seg.italic ? "italic" : "normal" }}>
                 {seg.text}
               </Text>
             ))}

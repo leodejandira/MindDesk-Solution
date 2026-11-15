@@ -10,6 +10,7 @@ import {
   TENANT_ID,
   authHeaders,
 } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 
 import {
   BarChart3,
@@ -963,6 +964,7 @@ function RelatoriosPage() {
 
   return (
     <PageShell>
+      <EntryAnimation name="relatorios" title="Relatórios" subtitle="Reunindo faltas, atrasos e banco de horas" />
       <div className="min-h-screen px-4 sm:px-6 py-6 sm:py-8 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_35%)] dark:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.16),transparent_35%)]">
         <div className="max-w-6xl mx-auto">
           <header className="flex items-center justify-between mb-8">

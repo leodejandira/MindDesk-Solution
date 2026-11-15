@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Image, Linking, Pressable, View } from "react-native";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Avatar, Badge, Button, Card, Empty, H, Icon, Input, Loading, Notice, Row, Screen, Segmented, T, confirm } from "@/components/ui";
 import { api } from "@/lib/api";
 import { posicaoAtual } from "@/lib/location";
@@ -26,6 +27,7 @@ type Local = { id: number; nome: string; latitude: number; longitude: number; ra
 export default function RevisaoPonto() {
   const [aba, setAba] = useState<"pontos" | "locais">("pontos");
   return (
+    <>
     <Screen title="Revisão de Ponto">
       <Segmented
         options={[
@@ -37,6 +39,8 @@ export default function RevisaoPonto() {
       />
       {aba === "pontos" ? <Pontos /> : <Locais />}
     </Screen>
+    <EntryAnimation name="ponto" title="Revisão de Ponto" subtitle="Carregando selfies e locais" />
+    </>
   );
 }
 

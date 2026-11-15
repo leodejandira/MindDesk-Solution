@@ -10,6 +10,7 @@ import {
   Logo,
   Alert,
 } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 
 import {
   Search,
@@ -348,6 +349,7 @@ function FuncionariosPage() {
 
   return (
     <PageShell>
+      <EntryAnimation name="funcionarios" title="Funcionários" subtitle="Reunindo sua equipe" />
       <div className="min-h-screen px-4 sm:px-6 py-6 sm:py-8 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_35%)] dark:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.15),transparent_35%)]">
         <div className="max-w-7xl mx-auto">
           <header className="flex items-center justify-between mb-8">

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Modal, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Avatar, Badge, Button, Card, Empty, H, Icon, Input, Loading, Notice, Row, Screen, Segmented, T, confirm } from "@/components/ui";
 import { api } from "@/lib/api";
 import { matches, validarFuncionario, type FuncForm } from "@/lib/logic";
@@ -40,6 +41,7 @@ export default function Funcionarios() {
   };
 
   return (
+    <>
     <Screen title="Funcionários" refreshing={lista.loading} onRefresh={lista.reload}>
       <Button title="Novo funcionário" icon="add" onPress={() => abrir(null)} />
       <Input placeholder="Buscar por nome, e-mail ou cargo..." value={busca} onChangeText={setBusca} />
@@ -82,6 +84,8 @@ export default function Funcionarios() {
       />
       )}
     </Screen>
+    <EntryAnimation name="funcionarios" title="Funcionários" subtitle="Reunindo sua equipe" />
+    </>
   );
 }
 

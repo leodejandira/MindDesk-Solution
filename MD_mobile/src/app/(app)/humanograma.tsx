@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { EntryAnimation } from "@/components/EntryAnimation";
 import { Avatar, Badge, Bars, Button, Card, Empty, Icon, Loading, Row, Screen, T } from "@/components/ui";
 import { api } from "@/lib/api";
 import { mapPessoaPA, type Cor, type Pessoa } from "@/lib/logic";
-import { TONES, useTheme, type ToneName } from "@/lib/theme";
+import { useTheme, type ToneName } from "@/lib/theme";
 import { useLoad } from "@/lib/useLoad";
 
 const COR: Record<Cor, ToneName> = { verde: "green", amarelo: "yellow", vermelho: "red", cinza: "gray" };
@@ -22,10 +23,12 @@ const METRICAS = [
 ] as const;
 
 export default function Humanograma() {
+  const { tones } = useTheme();
   const [aberto, setAberto] = useState<Pessoa | null>(null);
   const pessoas = useLoad(async () => ((await api<any[]>("/relatorios/relatorios-pa")) || []).map(mapPessoaPA));
 
   return (
+    <>
     <Screen title="Humanograma" refreshing={pessoas.loading} onRefresh={pessoas.reload}>
       <T muted>Monitore a saúde organizacional da sua equipe. Toque em um colaborador para ver a análise detalhada e o resumo gerado pela IA.</T>
       {pessoas.loading && !pessoas.data ? (
@@ -44,7 +47,7 @@ export default function Humanograma() {
                   <T bold lines={1}>{p.nome}</T>
                   <T muted size={12} lines={1}>{p.cargo} · Ref: {p.mes_referencia}</T>
                 </View>
-                <Icon name={HUMOR[p.humor].icon} size={22} color={TONES[HUMOR[p.humor].tone].fg} />
+                <Icon name={HUMOR[p.humor].icon} size={22} color={tones[HUMOR[p.humor].tone].fg} />
               </Row>
               <Row style={{ flexWrap: "wrap", gap: 6 }}>
                 <Badge label={`Turnover ${p.turnover}%`} tone={COR[p.cores.turnover]} />
@@ -58,11 +61,13 @@ export default function Humanograma() {
       )}
       <Detalhe p={aberto} onClose={() => setAberto(null)} />
     </Screen>
+    <EntryAnimation name="humanograma" title="Humanograma" subtitle="Analisando indicadores da equipe" />
+    </>
   );
 }
 
 function Detalhe({ p, onClose }: { p: Pessoa | null; onClose: () => void }) {
-  const { c } = useTheme();
+  const { c, tones } = useTheme();
   if (!p) return null;
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
@@ -81,7 +86,7 @@ function Detalhe({ p, onClose }: { p: Pessoa | null; onClose: () => void }) {
                 label,
                 value: p[k],
                 display: `${p[k]}%`,
-                color: TONES[COR[p.cores[k]]].fg,
+                color: tones[COR[p.cores[k]]].fg,
               }))}
             />
           </Card>
@@ -96,10 +101,10 @@ function Detalhe({ p, onClose }: { p: Pessoa | null; onClose: () => void }) {
             <T muted bold size={11}>AFASTAMENTO</T>
             <T muted>Sem afastamento ativo</T>
           </Card>
-          <Card style={{ backgroundColor: TONES.violet.bg, borderColor: TONES.violet.bg }}>
+          <Card style={{ backgroundColor: tones.violet.bg, borderColor: tones.violet.bg }}>
             <Row style={{ gap: 6 }}>
-              <Icon name="sparkles-outline" size={16} color={TONES.violet.fg} />
-              <T bold size={12} color={TONES.violet.fg}>RESUMO DA IA</T>
+              <Icon name="sparkles-outline" size={16} color={tones.violet.fg} />
+              <T bold size={12} color={tones.violet.fg}>RESUMO DA IA</T>
             </Row>
             <T size={14} color="#334155">{p.resumoIA}</T>
           </Card>

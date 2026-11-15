@@ -1,4 +1,10 @@
 const supabase = require('../config/supabase');
+const { createClient } = require('@supabase/supabase-js');
+
+// Cliente só com a service_role, sem sessão de usuário, para a API admin do Auth.
+const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+});
 
 /*
     GET
@@ -118,15 +124,19 @@ exports.registerUsuario = async (req, res) => {
             });
         }
 
+        // admin.createUser com email_confirm: o funcionário já consegue logar (o signUp exigia
+        // confirmação por e-mail, que nunca chega para e-mails corporativos fictícios).
         const { data: authData, error: authError } =
-            await supabase.auth.signUp({
+            await supabaseAdmin.auth.admin.createUser({
                 email,
-                password
+                password,
+                email_confirm: true
             });
 
         if (authError) {
+            const jaExiste = /already|registered|exists/i.test(authError.message || '');
             return res.status(400).json({
-                erro: 'Erro ao criar usuário',
+                erro: jaExiste ? 'E-mail já cadastrado' : 'Erro ao criar usuário',
                 detalhe: authError.message
             });
         }
@@ -134,12 +144,6 @@ exports.registerUsuario = async (req, res) => {
         if (!authData?.user) {
             return res.status(400).json({
                 erro: 'Usuário não retornado pelo auth'
-            });
-        }
-
-        if (authData.user.identities?.length === 0) {
-            return res.status(400).json({
-                erro: 'E-mail já cadastrado'
             });
         }
 

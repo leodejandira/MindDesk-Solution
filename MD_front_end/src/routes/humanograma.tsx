@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { API, authHeaders, getToken, PageShell, Card, BackButton, Logo } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 import {
   Smile,
   Meh,
@@ -204,6 +205,7 @@ function HumanogramaPage() {
 
   return (
     <PageShell>
+      <EntryAnimation name="humanograma" title="Humanograma" subtitle="Analisando indicadores da equipe" />
       <div className="min-h-screen px-4 sm:px-6 lg:px-12 py-6 sm:py-10 bg-[radial-gradient(circle_at_top,rgba(139,92,246,0.06),transparent_40%)]">
         
         {/* Cabeçalho Base */}

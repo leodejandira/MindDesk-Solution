@@ -10,10 +10,12 @@ import {
   API,
   authHeaders,
 } from "@/components/minddesk";
+import { EntryAnimation } from "@/components/entry-animation";
 
 import {
   MessageCircle,
-  QrCode,
+  Camera,
+  ShieldCheck,
   BarChart3,
   Users,
   GraduationCap,
@@ -38,7 +40,8 @@ type MenuItem = {
     | "/funcionarios"
     | "/documentos"
     | "/cursos"
-    | "/qrcode"
+    | "/ponto"
+    | "/revisao-ponto"
     | "/relatorios"
     | "/humanograma"
     | "/configuracoes";
@@ -77,11 +80,19 @@ const MENU: MenuItem[] = [
     desc: "Converse com o assistente virtual",
     to: "/chat",
   },
+  // "Gerar QR Code" oculto: o ponto agora é por selfie + localização. A rota /qrcode continua existindo.
   {
-    icon: <QrCode size={22} strokeWidth={1.8} />,
-    title: "Gerar QR Code",
-    desc: "Acesso rápido para colaboradores",
-    to: "/qrcode",
+    icon: <Camera size={22} strokeWidth={1.8} />,
+    title: "Registrar Ponto",
+    desc: "Selfie com localização",
+    to: "/ponto",
+  },
+  {
+    icon: <ShieldCheck size={22} strokeWidth={1.8} />,
+    title: "Revisão de Ponto",
+    desc: "Selfies e locais de trabalho",
+    to: "/revisao-ponto",
+    admin: true,
   },
   {
     icon: <BarChart3 size={22} strokeWidth={1.8} />,
@@ -262,8 +273,14 @@ function ManagerPage() {
   const [nome, setNome] = useState("usuário");
   const [isAdmin, setIsAdmin] = useState(false);
   const [avisos, setAvisos] = useState<Aviso[]>([]);
+  // Animação "first": só logo depois do login (o login.tsx marca a flag).
+  const [welcome, setWelcome] = useState(false);
 
   useEffect(() => {
+    if (sessionStorage.getItem("minddesk_welcome")) {
+      sessionStorage.removeItem("minddesk_welcome");
+      setWelcome(true);
+    }
     const p = getPayload() as Payload;
 
     if (!p) {
@@ -346,6 +363,15 @@ function ManagerPage() {
 
   return (
     <PageShell>
+      {welcome && (
+        <EntryAnimation
+          name="first"
+          title={`Olá, ${nome.replace(/(^|\s)\S/g, (m) => m.toUpperCase())}!`}
+          subtitle="Preparando seu espaço no MindDesk"
+          duration={3600}
+          onDone={() => setWelcome(false)}
+        />
+      )}
       <div className="min-h-screen px-4 sm:px-6 lg:px-12 py-6 sm:py-10 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.10),transparent_35%)]">
         {/* HEADER */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 mb-8 max-w-6xl mx-auto">

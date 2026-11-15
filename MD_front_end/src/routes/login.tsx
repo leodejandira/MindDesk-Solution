@@ -34,6 +34,7 @@ function LoginPage() {
         return;
       }
       localStorage.setItem(TOKEN_KEY, data.token);
+      sessionStorage.setItem("minddesk_welcome", "1"); // o /manager toca a animação "first" uma vez
       navigate({ to: "/manager" });
     } catch {
       setAlert({ msg: "Não foi possível conectar ao servidor.", type: "error" });
